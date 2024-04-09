@@ -1018,6 +1018,8 @@ class main {
         $upns = [];
 
         $guestsync = array_key_exists('guestsync', $usersyncsettings);
+        $emailsync = array_key_exists('emailsyncusernames', $usersyncsettings);
+        if($emailsync) $this->mtrace('Syncing users via emailaddress');
 
         foreach ($entraidusers as $i => $user) {
             if (!isset($user['userPrincipalName'])) {
@@ -1040,10 +1042,17 @@ class main {
             $usernames[] = $upnlower;
             $upns[] = $upnlower;
 
-            $upnsplit = explode('@', $upnlower);
-            if (!empty($upnsplit[0])) {
-                $entraidusers[$i]['upnsplit0'] = $upnsplit[0];
-                $usernames[] = $upnsplit[0];
+            if($emailsync) {
+                $usernames[] = $user['mail'];
+                $entraidusers[$i]['convertedupn'] = $user['mail'];
+            }
+
+            if(!isset($usersyncsettings['matchfullupn'])) {
+                $upnsplit = explode('@', $upnlower);
+                if (!empty($upnsplit[0])) {
+                    $entraidusers[$i]['upnsplit0'] = $upnsplit[0];
+                    $usernames[] = $upnsplit[0];
+                }
             }
 
             // Convert upn for guest users.
@@ -1084,7 +1093,7 @@ class main {
         $orderbysql = " ORDER BY CONCAT(u.username, '~')"; // Sort john.smith@email.com before john.smith.
 
         $fallbackusers = [];
-        if (isset($usersyncsettings['emailsync'])) {
+        if (isset($usersyncsettings['emailsync']) || $emailsync) {
             $select = "SELECT LOWER(u.email) AS email, LOWER(u.username) AS username, ";
 
             $duplicateemailaddresses = local_o365_get_duplicate_emails();
@@ -1115,9 +1124,12 @@ class main {
         $existingusers = $existingusers + $fallbackusers;
 
         foreach ($existingusers as $id => $existinguser) {
-            if (isset($usersyncsettings['emailsync'])) {
+            if($emailsync || isset($usersyncsettings['emailsync'])) {
                 if (!in_array($existinguser->email, $usernames)) {
                     unset($existingusers[$id]);
+                }
+                else {
+                    $this->mtrace('User ' . $existinguser->username . 'matched with email: ' .$existinguser->email  );
                 }
             } else {
                 if (!in_array($existinguser->username, $usernames)) {
@@ -1169,10 +1181,10 @@ class main {
                 continue;
             }
 
-            $this->mtrace('Syncing user '.$entraiduser['upnlower']);
+            //$this->mtrace('Syncing user '.$entraiduser['upnlower']);
 
             // Process guest users.
-            $entraiduser['convertedupn'] = $entraiduser['upnlower'];
+            $entraiduser['convertedupn'] = $entraiduser['convertedupn'] ?? $entraiduser['upnlower'];
             if (stripos($entraiduser['userPrincipalName'], '#EXT#') !== false) {
                 $entraiduser['convertedupn'] = strtolower($entraiduser['mail']);
             }
@@ -1253,6 +1265,7 @@ class main {
                 }
             } else {
                 // Entra ID user details match existing user record.
+                $this->mtrace('Syncing user '.$entraiduser['upnlower']);
                 $needsyncprofile = true;
 
                 // First check if this is a previously connected user who has been renamed in Microsoft, but the new username

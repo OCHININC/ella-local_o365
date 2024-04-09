@@ -58,6 +58,7 @@ class usersyncoptions extends admin_setting_configmulticheckbox {
             'reenable' => new \lang_string('settings_usersync_reenable', 'local_o365'),
             'disabledsync' => new \lang_string('settings_usersync_disabledsync', 'local_o365'),
             'match' => new \lang_string('settings_usersync_match', 'local_o365'),
+            'matchfullupn' => new \lang_string('settings_usersync_matchfullupn', 'local_o365'),
             'matchswitchauth' => new \lang_string('settings_usersync_matchswitchauth', 'local_o365'),
             'appassign' => new \lang_string('settings_usersync_appassign', 'local_o365'),
             'photosync' => new \lang_string('settings_usersync_photosync', 'local_o365'),
@@ -66,6 +67,7 @@ class usersyncoptions extends admin_setting_configmulticheckbox {
             'tzsynconlogin' => new \lang_string('settings_addsync_tzsynconlogin', 'local_o365'),
             'nodelta' => new \lang_string('settings_usersync_nodelta', 'local_o365'),
             'emailsync' => new \lang_string('settings_usersync_emailsync', 'local_o365'),
+            'emailsyncusernames' => new \lang_string('settings_usersync_emailsyncusernames', 'local_o365'),
             'guestsync' => new \lang_string('settings_usersync_guestsync', 'local_o365'),
         ];
         parent::__construct($name, $visiblename, $description, [], $choices);
