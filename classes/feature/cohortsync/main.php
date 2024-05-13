@@ -203,7 +203,8 @@ class main {
         global $DB;
 
         $systemcontext = context_system::instance();
-        $this->cohortlist = $DB->get_records_sql('SELECT * FROM {cohort}', ['contextid' => $systemcontext->id]); 
+        $systemcohorts = cohort_get_cohorts($systemcontext->id, 0, 0);
+        $this->cohortlist = $systemcohorts['cohorts'];
     }
 
     /**
