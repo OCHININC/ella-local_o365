@@ -77,6 +77,10 @@ class cohortsync extends scheduled_task {
 
         mtrace("... Start processing cohort mappings.");
         $grouplist = $cohortsync->get_grouplist();
+        $grouplist = array_filter($grouplist, function($group) {
+            return str_contains($group['displayName'], 'ochin-crowd-');
+        });
+
         mtrace("...... Found " . count($grouplist) . " groups.");
         $grouplistbyoid = [];
         foreach ($grouplist as $group) {
@@ -84,15 +88,55 @@ class cohortsync extends scheduled_task {
         }
 
         $mappings = $cohortsync->get_mappings();
-
-        if (empty($mappings)) {
-            mtrace("...... No mappings found. Nothing to process. Exiting.");
-
-            return;
-        }
-        mtrace("...... Found " . count($mappings) . " mappings.");
-
         $cohorts = $cohortsync->get_cohortlist();
+
+        if (empty($mappings) || count($mappings) != count($grouplist)) {
+            // Populate matches from existing cohorts if no mappings are found
+            if(empty($mappings)) {
+                mtrace("...... No mappings found. Creating matching to existing groups");
+                
+                foreach ($cohorts as $cohort) {
+                    foreach ($grouplist as $group) {
+                        if($group['displayName'] == $cohort->name) {
+                            mtrace("Found matching group " . $cohort->name);
+
+                            $added = $cohortsync->add_mapping($group['id'], $cohort->id);
+                            if($added) mtrace(("Group mapped"));
+                            else mtrace("Error mapping group");
+                        }
+                    }
+                }
+                
+                return;
+            }
+
+            // Find groups to add
+            $newgroups = $this->get_new_groups($cohorts, $grouplist);
+            mtrace("Found " . count($newgroups) . " new groups");
+            foreach($newgroups as $newgroup) {
+                mtrace("Found new group " . $newgroup['displayName']);
+
+                $new_cohort = new \stdClass();
+                $new_cohort->name = $newgroup['displayName'];
+                $new_cohort->contextid = 1;
+                //$new_cohort->description = $newgroup->description;
+                $id = cohort_add_cohort($new_cohort);
+
+                mtrace("Added new group: " . $new_cohort->name . " with id: " . $id);
+
+                $added = $cohortsync->add_mapping($newgroup['id'], $id);
+                if($added) mtrace(("Group mapped"));
+                else mtrace("Error mapping group");
+            }
+
+            // Delete groups
+            //$removedgroups = $this->get_removed_groups($grouplist, $cohorts);
+            //foreach($removedgroups as $removedgroup) {
+
+            //}
+        }
+
+        mtrace("...... Found " . count($mappings) . " mappings.");
 
         foreach ($mappings as $key => $mapping) {
             // Verify that the group still exists.
@@ -114,5 +158,47 @@ class cohortsync extends scheduled_task {
             mtrace("......... Processing mapping for group ID {$mapping->objectid} and cohort ID {$mapping->moodleid}.");
             $cohortsync->sync_members_by_group_oid_and_cohort_id($mapping->objectid, $mapping->moodleid);
         }
+    }
+
+    // Compares groups by name and returns groups not in the source groups
+    private function get_new_groups($moodle_cohorts, $azure_groups, $ignore = true) {
+        $results = array();
+        
+        foreach($azure_groups as $group) {
+            //skip any non ochin-crowd groups in compare group
+            if ($ignore && stripos($group['displayName'], "ochin-crowd") === false) continue;
+
+            $exists = false;
+
+            foreach($moodle_cohorts as $cohort) {
+                //skip any non ochin-crowd groups in source group
+                if (stripos($cohort->name, "ochin-crowd") === false) continue; 
+                if(strtolower($cohort->name) == strtolower($group['displayName'])) $exists = true;
+            }
+            if(!$exists) $results[] = $group;
+        }
+
+        return $results;
+    }
+
+    // Compares groups by name and returns groups not in the source groups
+    private function get_removed_groups($azure_groups, $moodle_cohorts, $ignore = true) {
+        $results = array();
+        
+        foreach($moodle_cohorts as $cohort) {
+            //skip any non ochin-crowd groups in compare group
+            if ($ignore && stripos($cohort->name, "ochin-crowd") === false) continue;
+
+            $exists = false;
+
+            foreach($azure_groups as $group) {
+                //skip any non ochin-crowd groups in source group
+                if (stripos($group['displayName'], "ochin-crowd") === false) continue; 
+                if(strtolower($group['displayName']) == strtolower($cohort->name)) $exists = true;
+            }
+            if(!$exists) $results[] = $cohort;
+        }
+
+        return $results;
     }
 }

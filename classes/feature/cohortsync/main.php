@@ -200,9 +200,10 @@ class main {
      * Fetch cohorts from the local Moodle cache.
      */
     public function fetch_cohorts() : void {
+        global $DB;
+
         $systemcontext = context_system::instance();
-        $systemcohorts = cohort_get_cohorts($systemcontext->id);
-        $this->cohortlist = $systemcohorts['cohorts'];
+        $this->cohortlist = $DB->get_records_sql('SELECT * FROM {cohort}', ['contextid' => $systemcontext->id]); 
     }
 
     /**

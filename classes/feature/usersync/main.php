@@ -831,7 +831,7 @@ class main {
         $creationallowed = $this->check_usercreationrestriction($entraiduserdata);
 
         if ($creationallowed !== true) {
-            $this->mtrace('Cannot create user because they do not meet the configured user creation restrictions.');
+            $this->mtrace('Cannot create user ' . $entraiduserdata['givenName'] . ' because they do not meet the configured user creation restrictions.');
             return false;
         }
 
@@ -1019,7 +1019,11 @@ class main {
 
         $guestsync = array_key_exists('guestsync', $usersyncsettings);
         $emailsync = array_key_exists('emailsyncusernames', $usersyncsettings);
+        $fullupnmatch = array_key_exists('matchfullupn', $usersyncsettings);
+        $updateusers = array_key_exists('update', $usersyncsettings);
+
         if($emailsync) $this->mtrace('Syncing users via emailaddress');
+        if($fullupnmatch) $this->mtrace('Using full UPN matches only');
 
         foreach ($entraidusers as $i => $user) {
             if (!isset($user['userPrincipalName'])) {
@@ -1047,7 +1051,7 @@ class main {
                 $entraidusers[$i]['convertedupn'] = $user['mail'];
             }
 
-            if(!isset($usersyncsettings['matchfullupn'])) {
+            if(!$fullupnmatch) {
                 $upnsplit = explode('@', $upnlower);
                 if (!empty($upnsplit[0])) {
                     $entraidusers[$i]['upnsplit0'] = $upnsplit[0];
@@ -1129,7 +1133,7 @@ class main {
                     unset($existingusers[$id]);
                 }
                 else {
-                    $this->mtrace('User ' . $existinguser->username . 'matched with email: ' .$existinguser->email  );
+                    //$this->mtrace('User ' . $existinguser->username . 'matched with email: ' .$existinguser->email  );
                 }
             } else {
                 if (!in_array($existinguser->username, $usernames)) {
@@ -1265,7 +1269,6 @@ class main {
                 }
             } else {
                 // Entra ID user details match existing user record.
-                $this->mtrace('Syncing user '.$entraiduser['upnlower']);
                 $needsyncprofile = true;
 
                 // First check if this is a previously connected user who has been renamed in Microsoft, but the new username
@@ -1354,6 +1357,7 @@ class main {
 
                     $connected = false;
                     if ($syncexistinguser) {
+                        $this->mtrace('Syncing existing user '.$entraiduser['upnlower']);
                         $connected = $this->sync_existing_user($usersyncsettings, $entraiduser, $existinguser, $exactmatch);
                     }
 
@@ -1397,7 +1401,7 @@ class main {
                     }
                 }
             }
-            $this->mtrace(' ');
+            //$this->mtrace(' ');
         }
 
         return true;
