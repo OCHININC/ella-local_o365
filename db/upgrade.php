@@ -1159,18 +1159,21 @@ function xmldb_local_o365_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2022112826, 'local', 'o365');
     }
 
-    if ($oldversion < 2022112831) {
-        // Changing nullability of field courseid on table local_o365_course_request to null.
-        $table = new xmldb_table('local_o365_course_request');
-        $field = new xmldb_field('courseid', XMLDB_TYPE_INTEGER, '10', null, null, null, '0', 'requeststatus');
-
-        // Launch change of nullability for field courseid.
-        $dbman->change_field_notnull($table, $field);
+    if ($oldversion < 2022112832) {
+        // Fix data type issue in calsyncinlastrun config.
+        $calsyncinlastrun = get_config('local_o365', 'calsyncinlastrun');
+        if ($calsyncinlastrun && !is_numeric($calsyncinlastrun)) {
+            $calsyncinlastrun = strtotime($calsyncinlastrun);
+            if ($calsyncinlastrun) {
+                set_config('calsyncinlastrun', $calsyncinlastrun, 'local_o365');
+            } else {
+                set_config('calsyncinlastrun', 0, 'local_o365');
+            }
+        }
 
         // O365 savepoint reached.
-        upgrade_plugin_savepoint(true, 2022112831, 'local', 'o365');
+        upgrade_plugin_savepoint(true, 2022112832, 'local', 'o365');
     }
-
 
     return true;
 }
