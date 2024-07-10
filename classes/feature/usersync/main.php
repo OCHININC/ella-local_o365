@@ -1047,8 +1047,8 @@ class main {
             $upns[] = $upnlower;
 
             if($emailsync) {
-                $usernames[] = $user['mail'];
-                $entraidusers[$i]['convertedupn'] = $user['mail'];
+                $usernames[] = core_text::strtolower($user['mail']);
+                $entraidusers[$i]['convertedupn'] = core_text::strtolower($user['mail']);
             }
 
             if(!$fullupnmatch) {
@@ -1357,14 +1357,14 @@ class main {
 
                     $connected = false;
                     if ($syncexistinguser) {
-                        $this->mtrace('Syncing existing user '.$entraiduser['upnlower']);
+                        //$this->mtrace('Syncing existing user '.$entraiduser['upnlower']);
                         $connected = $this->sync_existing_user($usersyncsettings, $entraiduser, $existinguser, $exactmatch);
                     }
 
                     if (($existinguser->auth === 'oidc' || empty($existinguser->tokid)) && $connected) {
                         // Create userobject if it does not exist.
                         if (empty($existinguser->objectid)) {
-                            $this->mtrace('Adding o365 object record for user.');
+                            $this->mtrace('Adding o365 object record for user ' .$entraiduser['upnlower']);
                             $now = time();
                             $userobjectdata = (object) [
                                 'type' => 'user',
@@ -1379,7 +1379,7 @@ class main {
                             $userobjectdata->id = $DB->insert_record('local_o365_objects', $userobjectdata);
                         }
                         // User already connected.
-                        $this->mtrace('User is now synced.');
+                        //$this->mtrace('User is now synced.');
                     }
                 }
             }
